@@ -1,0 +1,33 @@
+name: ZXCMUSS-ipa
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unzip project
+        run: unzip -oq ZXCMUSS-iOS.zip -d ios
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        working-directory: ios
+        run: xcodegen generate
+      - name: Build (unsigned)
+        working-directory: ios
+        run: |
+          xcodebuild -project ZXCMUSS.xcodeproj -scheme ZXCMUSS -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+      - name: Package IPA
+        working-directory: ios
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/ZXCMUSS.app Payload/
+          zip -qry ZXCMUSS.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ZXCMUSS-ipa
+          path: ios/ZXCMUSS.ipa
